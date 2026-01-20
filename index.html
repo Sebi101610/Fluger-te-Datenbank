@@ -91,66 +91,62 @@
   <button class="action" id="registerBtn">Registrieren</button>
 </div>
 
-<!-- Firebase SDK -->
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
-  // ===== Firebase Config =====
-  const firebaseConfig = {
-    apiKey: "AIzaSyBG_GCHduhL5CltwZen_rWGtOtdIQN-ee0",
-    authDomain: "fluggeraete-972ab.firebaseapp.com",
-    projectId: "fluggeraete-972ab",
-    storageBucket: "fluggeraete-972ab.appspot.com",
-    messagingSenderId: "274621550753",
-    appId: "1:274621550753:web:e85a666461c1867808e0e0",
-    measurementId: "G-TV3B9QN03R"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyBG_GCHduhL5CltwZen_rWGtOtdIQN-ee0",
+  authDomain: "fluggeraete-972ab.firebaseapp.com",
+  projectId: "fluggeraete-972ab",
+  storageBucket: "fluggeraete-972ab.appspot.com",
+  messagingSenderId: "274621550753",
+  appId: "1:274621550753:web:e85a666461c1867808e0e0",
+  measurementId: "G-TV3B9QN03R"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 
-  const loginBtn = document.getElementById('loginBtn');
-  const registerBtn = document.getElementById('registerBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const emailInput = document.getElementById('email');
-  const passwordInput = document.getElementById('password');
+const loginBtn = document.getElementById('loginBtn');
+const registerBtn = document.getElementById('registerBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const emailInput = document.getElementById('email');
+const passwordInput = document.getElementById('password');
 
-  // Registrierung
-  registerBtn.addEventListener('click', () => {
-    const email = emailInput.value;
-    const password = passwordInput.value;
-    if(!email || !password) return alert("Bitte E-Mail und Passwort eingeben!");
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(() => alert("Registrierung erfolgreich!"))
-      .catch(e => alert("Fehler: " + e.message));
-  });
+// Registrierung
+registerBtn.addEventListener('click', () => {
+  const email = emailInput.value;
+  const password = passwordInput.value;
+  if(!email || !password) return alert("Bitte E-Mail und Passwort eingeben!");
+  createUserWithEmailAndPassword(auth, email, password)
+    .then(() => alert("Registrierung erfolgreich!"))
+    .catch(e => alert("Fehler: " + e.message));
+});
 
-  // Login
-  loginBtn.addEventListener('click', () => {
-    const email = emailInput.value;
-    const password = passwordInput.value;
-    if(!email || !password) return alert("Bitte E-Mail und Passwort eingeben!");
-    signInWithEmailAndPassword(auth, email, password)
-      .then(() => {
-        window.location.href = "search.html"; // nach Login weiterleiten
-      })
-      .catch(e => alert("Fehler: " + e.message));
-  });
+// Login
+loginBtn.addEventListener('click', () => {
+  const email = emailInput.value;
+  const password = passwordInput.value;
+  if(!email || !password) return alert("Bitte E-Mail und Passwort eingeben!");
+  signInWithEmailAndPassword(auth, email, password)
+    .then(() => {
+      window.location.href = "search.html"; // Weiterleitung nach Login
+    })
+    .catch(e => alert("Fehler: " + e.message));
+});
 
-  // Logout (sichtbar nur nach Login)
-  logoutBtn.addEventListener('click', () => {
-    signOut(auth);
-  });
+// Logout
+logoutBtn.addEventListener('click', () => {
+  signOut(auth);
+});
 
-  // Auth-State Listener
-  onAuthStateChanged(auth, user => {
-    if(user){
-      logoutBtn.style.display = "block";
-    } else {
-      logoutBtn.style.display = "none";
-    }
-  });
+// Prüfen, ob schon eingeloggt → sofort weiterleiten
+onAuthStateChanged(auth, user => {
+  if(user){
+    window.location.href = "search.html";
+  }
+});
 </script>
 
 </body>
