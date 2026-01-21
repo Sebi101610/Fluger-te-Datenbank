@@ -3,86 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aviatik-Login</title>
+<title>Aviatik Login</title>
 <style>
-  body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #0077b6, #023e8a, #00b4d8);
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  header {
-    width: 100%;
-    display: flex;
-    justify-content: flex-end;
-    padding: 20px 40px;
-    background: rgba(0,0,0,0.2);
-    position: fixed;
-    top: 0;
-    z-index: 10;
-  }
-
-  header button {
-    background: #00b4d8;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    color: #fff;
-    font-weight: bold;
-    cursor: pointer;
-  }
-
-  h1 {
-    text-align: center;
-    font-size: 2em;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    margin-top: 100px;
-  }
-
-  input {
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 5px;
-    border: none;
-    width: 250px;
-    font-size: 16px;
-  }
-
-  button.action {
-    background: #00b4d8;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 5px;
-    color: #fff;
-    font-weight: bold;
-    cursor: pointer;
-    margin-top: 10px;
-  }
-
-  .login-box {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    background: rgba(0,0,0,0.2);
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
-  }
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg,#0077b6,#023e8a,#00b4d8);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+h1 { margin-bottom: 40px; text-align:center; font-size:2em; }
+.login-box {
+  display:flex; flex-direction:column; align-items:center;
+  background: rgba(0,0,0,0.25); padding:30px; border-radius:10px;
+}
+input {
+  padding:10px; margin:10px 0; border-radius:5px; border:none; width:250px; font-size:16px;
+}
+button.action {
+  background:#00b4d8; border:none; padding:10px 20px; border-radius:5px;
+  color:white; font-weight:bold; cursor:pointer; margin-top:10px;
+}
 </style>
 </head>
 <body>
 
-<header>
-  <button id="logoutBtn" style="display:none;">Logout</button>
-</header>
-
-<h1>Willkommen bei der Aviatik-Datenbank</h1>
+<h1>Willkommen in der Aviatik-Datenbank</h1>
 
 <div class="login-box">
   <input type="email" id="email" placeholder="E-Mail">
@@ -93,7 +43,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBG_GCHduhL5CltwZen_rWGtOtdIQN-ee0",
@@ -101,8 +51,7 @@ const firebaseConfig = {
   projectId: "fluggeraete-972ab",
   storageBucket: "fluggeraete-972ab.appspot.com",
   messagingSenderId: "274621550753",
-  appId: "1:274621550753:web:e85a666461c1867808e0e0",
-  measurementId: "G-TV3B9QN03R"
+  appId: "1:274621550753:web:e85a666461c1867808e0e0"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -110,42 +59,30 @@ const auth = getAuth(app);
 
 const loginBtn = document.getElementById('loginBtn');
 const registerBtn = document.getElementById('registerBtn');
-const logoutBtn = document.getElementById('logoutBtn');
 const emailInput = document.getElementById('email');
 const passwordInput = document.getElementById('password');
 
-// Registrierung
 registerBtn.addEventListener('click', () => {
   const email = emailInput.value;
   const password = passwordInput.value;
   if(!email || !password) return alert("Bitte E-Mail und Passwort eingeben!");
-  createUserWithEmailAndPassword(auth, email, password)
-    .then(() => alert("Registrierung erfolgreich!"))
-    .catch(e => alert("Fehler: " + e.message));
+  createUserWithEmailAndPassword(auth,email,password)
+    .then(()=>window.location.href="animation.html")
+    .catch(e=>alert("Fehler: "+e.message));
 });
 
-// Login
 loginBtn.addEventListener('click', () => {
   const email = emailInput.value;
   const password = passwordInput.value;
   if(!email || !password) return alert("Bitte E-Mail und Passwort eingeben!");
-  signInWithEmailAndPassword(auth, email, password)
-    .then(() => {
-      window.location.href = "search.html"; // Weiterleitung nach Login
-    })
-    .catch(e => alert("Fehler: " + e.message));
+  signInWithEmailAndPassword(auth,email,password)
+    .then(()=>window.location.href="animation.html")
+    .catch(e=>alert("Fehler: "+e.message));
 });
 
-// Logout
-logoutBtn.addEventListener('click', () => {
-  signOut(auth);
-});
-
-// Prüfen, ob schon eingeloggt → sofort weiterleiten
-onAuthStateChanged(auth, user => {
-  if(user){
-    window.location.href = "search.html";
-  }
+// Schon angemeldet → direkt Animation
+onAuthStateChanged(auth,user=>{
+  if(user) window.location.href="animation.html";
 });
 </script>
 
