@@ -4,81 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Flugzeuge Spezifikationen</title>
-
 <style>
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #0077b6, #023e8a, #00b4d8);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 20px;
-}
-
-header {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end;
-  padding: 20px 40px;
-  background: rgba(0,0,0,0.25);
-  position: sticky;
-  top: 0;
-}
-
-header button {
-  background: #00b4d8;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-h1 {
-  text-align: center;
-  margin-top: 40px;
-}
-
-#search {
-  display: block;
-  margin: 30px auto;
-  width: 90%;
-  max-width: 400px;
-  padding: 12px;
-  border-radius: 6px;
-  border: none;
-  font-size: 16px;
-}
-
-#results {
-  margin-top: 20px;
-  width: 90%;
-  max-width: 600px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  color: #000;
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-th, td {
-  padding: 10px;
-  border-bottom: 1px solid #ddd;
-}
-
-th {
-  background-color: #00b4d8;
-  color: white;
-  text-align: left;
-}
+body { font-family:Arial,sans-serif;margin:0;min-height:100vh;background:linear-gradient(135deg,#0077b6,#023e8a,#00b4d8);color:white; display:flex; flex-direction:column; align-items:center; padding:20px; }
+header { width:100%; display:flex; justify-content:flex-end; padding:20px 40px; background:rgba(0,0,0,0.25); position:sticky; top:0;}
+header button { background:#00b4d8; border:none; padding:10px 20px; border-radius:5px; color:white; font-weight:bold; cursor:pointer; }
+h1 { text-align:center; margin-top:40px; }
+#search { display:block; margin:30px auto; width:90%; max-width:400px; padding:12px; border-radius:6px; border:none; font-size:16px; }
+#results { margin-top:20px; width:90%; max-width:600px; }
+table { width:100%; border-collapse:collapse; background:#fff; color:#000; border-radius:10px; overflow:hidden; margin-bottom:20px; }
+th, td { padding:10px; border-bottom:1px solid #ddd; }
+th { background-color:#00b4d8; color:white; text-align:left; }
 </style>
 </head>
 <body>
@@ -97,100 +32,68 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebas
 import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBG_GCHduhL5CltwZen_rWGtOtdIQN-ee0",
-  authDomain: "fluggeraete-972ab.firebaseapp.com",
-  projectId: "fluggeraete-972ab",
-  storageBucket: "fluggeraete-972ab.appspot.com",
-  messagingSenderId: "274621550753",
-  appId: "1:274621550753:web:e85a666461c1867808e0e0"
+  apiKey:"AIzaSyBG_GCHduhL5CltwZen_rWGtOtdIQN-ee0",
+  authDomain:"fluggeraete-972ab.firebaseapp.com",
+  projectId:"fluggeraete-972ab",
+  storageBucket:"fluggeraete-972ab.appspot.com",
+  messagingSenderId:"274621550753",
+  appId:"1:274621550753:web:e85a666461c1867808e0e0"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-const logoutBtn = document.getElementById('logoutBtn');
-const searchInput = document.getElementById('search');
-const resultsDiv = document.getElementById('results');
+const logoutBtn=document.getElementById('logoutBtn');
+const searchInput=document.getElementById('search');
+const resultsDiv=document.getElementById('results');
 
-/* ===== Logout & Auth ===== */
-logoutBtn.addEventListener('click', () => {
-  signOut(auth).then(() => {
-    window.location.href = "index.html";
-  });
-});
+logoutBtn.addEventListener('click',()=>signOut(auth).then(()=>window.location.href="index.html"));
+onAuthStateChanged(auth,user=>{if(!user) window.location.href="index.html";});
 
-onAuthStateChanged(auth, user => {
-  if (!user) window.location.href = "index.html";
-});
+const allowedKeywords=["airbus","boeing","cessna","lockheed","f-","f22","f-22","mig","sukhoi","antonov","concorde","spitfire","messerschmitt","junkers","raptor","fighter","flugzeug"];
+function isFlugzeug(title){return allowedKeywords.some(k=>title.toLowerCase().includes(k));}
 
-/* ===== Keyword-Filter ===== */
-const allowedKeywords = [
-  "airbus","boeing","cessna","lockheed","f-","f22","f-22","mig",
-  "sukhoi","antonov","concorde","spitfire","messerschmitt",
-  "junkers","raptor","fighter","flugzeug"
-];
-
-function isFlugzeug(title) {
-  return allowedKeywords.some(k => title.toLowerCase().includes(k));
-}
-
-/* ===== Suche + Wikidata-Abfrage ===== */
 async function searchFlugzeug(query){
-  resultsDiv.innerHTML = "";
+  resultsDiv.innerHTML="";
   if(!query) return;
 
-  // Wikipedia Suche
-  const wikiUrl = `https://de.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=5&prop=pageprops&origin=*`;
-  const wikiRes = await fetch(wikiUrl);
-  const wikiData = await wikiRes.json();
+  const wikiUrl=`https://de.wikipedia.org/w/api.php?action=query&format=json&generator=search&gsrsearch=${encodeURIComponent(query)}&gsrlimit=5&prop=pageprops&origin=*`;
+  const wikiRes=await fetch(wikiUrl);
+  const wikiData=await wikiRes.json();
+  if(!wikiData.query) return resultsDiv.innerHTML="<p>Kein Fluggerät gefunden.</p>";
 
-  if(!wikiData.query) return resultsDiv.innerHTML = "<p>Kein Fluggerät gefunden.</p>";
-
-  const pages = wikiData.query.pages;
-
+  const pages=wikiData.query.pages;
   for(let id in pages){
-    const page = pages[id];
-
+    const page=pages[id];
     if(!isFlugzeug(page.title)) continue;
-
-    const wikidataId = page.pageprops.wikibase_item;
+    const wikidataId=page.pageprops.wikibase_item;
     if(!wikidataId) continue;
 
-    // Wikidata-Abfrage für wichtige Specs
-    const wdUrl = `https://www.wikidata.org/wiki/Special:EntityData/${wikidataId}.json`;
-    const wdRes = await fetch(wdUrl);
-    const wdData = await wdRes.json();
+    const wdUrl=`https://www.wikidata.org/wiki/Special:EntityData/${wikidataId}.json`;
+    const wdRes=await fetch(wdUrl);
+    const wdData=await wdRes.json();
+    const entity=wdData.entities[wikidataId].claims;
 
-    const entity = wdData.entities[wikidataId].claims;
+    function getValue(prop){ if(entity[prop] && entity[prop][0] && entity[prop][0].mainsnak.datavalue) return entity[prop][0].mainsnak.datavalue.value; return "-"; }
 
-    // Hilfsfunktion, um Wert zu extrahieren
-    function getValue(prop){
-      if(entity[prop] && entity[prop][0]){
-        if(entity[prop][0].mainsnak.datavalue){
-          return entity[prop][0].mainsnak.datavalue.value;
-        }
-      }
-      return "-";
-    }
-
-    // Tabelle erstellen
-    const table = document.createElement('table');
-    table.innerHTML = `
+    const table=document.createElement('table');
+    table.innerHTML=`
       <tr><th>Name / Typ</th><td>${page.title}</td></tr>
-      <tr><th>Hersteller</th><td>${getValue("P176") || "-"}</td></tr>
-      <tr><th>Max. Startgewicht</th><td>${getValue("P2067") || "-"}</td></tr>
-      <tr><th>Reichweite</th><td>${getValue("P2043") || "-"}</td></tr>
-      <tr><th>Crew / Sitzplätze</th><td>${getValue("P1132") || "-"}</td></tr>
+      <tr><th>Hersteller</th><td>${getValue("P176")||"-"}</td></tr>
+      <tr><th>Max. Startgewicht</th><td>${getValue("P2067")||"-"}</td></tr>
+      <tr><th>Reichweite</th><td>${getValue("P2043")||"-"}</td></tr>
+      <tr><th>Crew / Sitzplätze</th><td>${getValue("P1132")||"-"}</td></tr>
     `;
     resultsDiv.appendChild(table);
   }
 }
 
-searchInput.addEventListener('input', e=>{
-  const q = e.target.value.trim();
+searchInput.addEventListener('input',e=>{
+  const q=e.target.value.trim();
   if(q.length>=2) searchFlugzeug(q);
   else resultsDiv.innerHTML="";
 });
 </script>
+
 </body>
 </html>
