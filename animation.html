@@ -5,34 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>A380 Start Animation</title>
 <style>
-body,html { margin:0;padding:0;height:100%;overflow:hidden;display:flex;justify-content:center;align-items:center;position:relative;font-family:Arial,sans-serif;background:black;}
-video { width:100%; height:100%; object-fit:cover; }
-.overlay {
-  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-  color:white; font-size:3em; text-align:center; opacity:0;
-  animation: fadeInOut 5s forwards;
-  text-shadow: 2px 2px 10px rgba(0,0,0,0.7);
-}
-@keyframes fadeInOut {
-  0% {opacity:0;}
-  20% {opacity:1;}
-  80% {opacity:1;}
-  100% {opacity:0;}
-}
+  body,html {
+    margin:0;
+    padding:0;
+    height:100%;
+    overflow:hidden;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    position:relative;
+    font-family:Arial,sans-serif;
+    background:black;
+  }
+
+  video {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+  }
+
+  /* Overlay Text */
+  .overlay {
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    color:white;
+    font-size:3em;
+    text-align:center;
+    opacity:0;
+    animation: fadeInOut 5s forwards;
+    text-shadow: 2px 2px 10px rgba(0,0,0,0.7);
+  }
+
+  @keyframes fadeInOut {
+    0% {opacity:0;}
+    20% {opacity:1;}
+    80% {opacity:1;}
+    100% {opacity:0;}
+  }
 </style>
 </head>
 <body>
 
 <video id="introVideo" autoplay muted>
-  <source src="A380_start.mp4" type="video/mp4">
+  <source src="[nummern].mp4" type="video/mp4">
   Dein Browser unterstützt das Video-Tag nicht.
 </video>
 
 <div class="overlay">Willkommen in der Aviatik-Datenbank ✈️</div>
 
 <script>
-const video = document.getElementById("introVideo");
-video.addEventListener("ended",()=>window.location.href="search.html");
+  const video = document.getElementById("introVideo");
+
+  // Nach Ende des Videos → Weiterleitung zur Suchseite
+  video.addEventListener("ended", () => {
+    window.location.href = "search.html";
+  });
 </script>
 
 </body>
