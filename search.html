@@ -27,15 +27,13 @@ h1 {
 }
 
 input {
-  padding: 10px;
-  width: 320px;
-  font-size: 1em;
+  padding: 8px;
+  margin: 3px;
 }
 
 button {
-  padding: 10px 15px;
+  padding: 8px 12px;
   margin: 5px;
-  font-size: 0.9em;
   cursor: pointer;
 }
 
@@ -64,11 +62,20 @@ img {
 #missingBox {
   margin: 20px auto;
   width: 90%;
-  max-width: 600px;
+  max-width: 700px;
   background: rgba(0,0,0,0.85);
   padding: 15px;
   border-radius: 8px;
   display: none;
+}
+#missingBox div {
+  margin-bottom: 15px;
+  padding: 8px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 5px;
+}
+#missingBox input {
+  width: 100px;
 }
 </style>
 </head>
@@ -99,13 +106,13 @@ img {
 </table>
 
 <div id="missingBox">
-  <h3>Fehlende Fluggeräte (localStorage)</h3>
-  <ul id="missingList"></ul>
+  <h3>Fehlende Fluggeräte bearbeiten</h3>
+  <div id="missingList"></div>
 </div>
 
 <script>
 // ====== LOKALE SPEZIFIKATIONEN ======
-const specs = {
+let specs = {
   "a380": ["Flugzeug","Airbus","575.000 kg","555","1020 km/h"],
   "f22": ["Kampfflugzeug","Lockheed Martin","29.000 kg","1","2410 km/h"],
   "p-51": ["Kampfflugzeug","North American","4.000 kg","1","700 km/h"],
@@ -169,25 +176,53 @@ async function searchAircraft() {
   }
 }
 
-// ====== FEHLENDE ANZEIGEN ======
+// ====== FEHLENDE ANZEIGEN + EDITIEREN ======
 function showMissing() {
   const box = document.getElementById("missingBox");
-  const list = document.getElementById("missingList");
-  list.innerHTML = "";
+  const listDiv = document.getElementById("missingList");
+  listDiv.innerHTML = "";
 
   const missing = JSON.parse(localStorage.getItem("missingAircraft")) || [];
 
   if (missing.length === 0) {
-    list.innerHTML = "<li>Keine fehlenden Fluggeräte 👍</li>";
+    listDiv.innerHTML = "<p>Keine fehlenden Fluggeräte 👍</p>";
   } else {
-    missing.forEach(item => {
-      const li = document.createElement("li");
-      li.textContent = item;
-      list.appendChild(li);
+    missing.forEach(name => {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <strong>${name}</strong><br>
+        Typ: <input id="type-${name}" placeholder="Flugzeug"><br>
+        Hersteller: <input id="hersteller-${name}" placeholder="Airbus"><br>
+        Gewicht: <input id="gewicht-${name}" placeholder="kg"><br>
+        Sitzplätze: <input id="sitze-${name}" placeholder="1"><br>
+        Max. Geschwindigkeit: <input id="speed-${name}" placeholder="km/h"><br>
+        <button onclick="saveSpecs('${name}')">Speichern</button>
+      `;
+      listDiv.appendChild(div);
     });
   }
 
   box.style.display = "block";
+}
+
+// ====== SPEZIFIKATIONEN SPEICHERN ======
+function saveSpecs(name) {
+  const type = document.getElementById(`type-${name}`).value || "Nicht verfügbar";
+  const hersteller = document.getElementById(`hersteller-${name}`).value || "Nicht verfügbar";
+  const gewicht = document.getElementById(`gewicht-${name}`).value || "–";
+  const sitze = document.getElementById(`sitze-${name}`).value || "–";
+  const speed = document.getElementById(`speed-${name}`).value || "–";
+
+  specs[name.toLowerCase()] = [type, hersteller, gewicht, sitze, speed];
+
+  // aus missing entfernen
+  let missing = JSON.parse(localStorage.getItem("missingAircraft")) || [];
+  missing = missing.filter(n => n.toLowerCase() !== name.toLowerCase());
+  localStorage.setItem("missingAircraft", JSON.stringify(missing));
+
+  alert(`${name} wurde gespeichert!`);
+
+  showMissing(); // Liste aktualisieren
 }
 
 // ====== LISTE LÖSCHEN ======
