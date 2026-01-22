@@ -142,7 +142,6 @@ async function searchAircraft() {
 
   // ====== Zuerst prüfen, ob es im specs-Objekt schon existiert ======
   if (specs[key]) {
-    // Direkt Tabelle füllen
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${query}</td>
@@ -154,7 +153,7 @@ async function searchAircraft() {
       <td>—</td>
     `;
     table.appendChild(row);
-    return; // Suche abgeschlossen
+    return;
   }
 
   // ====== Wenn nicht gefunden, Wikipedia abfragen ======
@@ -165,8 +164,7 @@ async function searchAircraft() {
     const data = await response.json();
 
     if (!data.title) {
-      saveMissing(query);
-      alert("Nicht gefunden – gespeichert");
+      alert("Nicht gefunden. Bitte fehlende Daten erst manuell eintragen!");
       return;
     }
 
@@ -190,7 +188,7 @@ async function searchAircraft() {
 
   } catch (err) {
     console.error(err);
-    saveMissing(query);
+    alert("Fehler bei der Suche. Gerät bitte manuell eintragen!");
   }
 }
 
@@ -207,13 +205,14 @@ function showMissing() {
   } else {
     missing.forEach(name => {
       const div = document.createElement("div");
+      const s = specs[name.toLowerCase()] || ["", "", "", "", ""];
       div.innerHTML = `
         <strong>${name}</strong><br>
-        Typ: <input id="type-${name}" placeholder="Flugzeug"><br>
-        Hersteller: <input id="hersteller-${name}" placeholder="Airbus"><br>
-        Gewicht: <input id="gewicht-${name}" placeholder="kg"><br>
-        Sitzplätze: <input id="sitze-${name}" placeholder="1"><br>
-        Max. Geschwindigkeit: <input id="speed-${name}" placeholder="km/h"><br>
+        Typ: <input id="type-${name}" placeholder="Flugzeug" value="${s[0]}"><br>
+        Hersteller: <input id="hersteller-${name}" placeholder="Airbus" value="${s[1]}"><br>
+        Gewicht: <input id="gewicht-${name}" placeholder="kg" value="${s[2]}"><br>
+        Sitzplätze: <input id="sitze-${name}" placeholder="1" value="${s[3]}"><br>
+        Max. Geschwindigkeit: <input id="speed-${name}" placeholder="km/h" value="${s[4]}"><br>
         <button onclick="saveSpecs('${name}')">Speichern</button>
       `;
       listDiv.appendChild(div);
@@ -225,22 +224,31 @@ function showMissing() {
 
 // ====== SPEZIFIKATIONEN SPEICHERN ======
 function saveSpecs(name) {
-  const type = document.getElementById(`type-${name}`).value || "Nicht verfügbar";
-  const hersteller = document.getElementById(`hersteller-${name}`).value || "Nicht verfügbar";
-  const gewicht = document.getElementById(`gewicht-${name}`).value || "–";
-  const sitze = document.getElementById(`sitze-${name}`).value || "–";
-  const speed = document.getElementById(`speed-${name}`).value || "–";
+  const type = document.getElementById(`type-${name}`).value.trim();
+  const hersteller = document.getElementById(`hersteller-${name}`).value.trim();
+  const gewicht = document.getElementById(`gewicht-${name}`).value.trim();
+  const sitze = document.getElementById(`sitze-${name}`).value.trim();
+  const speed = document.getElementById(`speed-${name}`).value.trim();
 
-  specs[name.toLowerCase()] = [type, hersteller, gewicht, sitze, speed];
+  if (!type && !hersteller && !gewicht && !sitze && !speed) {
+    alert("Bitte mindestens ein Feld ausfüllen, bevor du speicherst!");
+    return;
+  }
 
-  // aus missing entfernen
+  specs[name.toLowerCase()] = [
+    type || "Nicht verfügbar",
+    hersteller || "Nicht verfügbar",
+    gewicht || "–",
+    sitze || "–",
+    speed || "–"
+  ];
+
   let missing = JSON.parse(localStorage.getItem("missingAircraft")) || [];
   missing = missing.filter(n => n.toLowerCase() !== name.toLowerCase());
   localStorage.setItem("missingAircraft", JSON.stringify(missing));
 
   alert(`${name} wurde gespeichert!`);
-
-  showMissing(); // Liste aktualisieren
+  showMissing();
 }
 
 // ====== LISTE LÖSCHEN ======
