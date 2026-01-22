@@ -124,8 +124,8 @@ let specs = {
 // ====== FEHLENDE SPEICHERN ======
 function saveMissing(name) {
   let missing = JSON.parse(localStorage.getItem("missingAircraft")) || [];
-  if (!missing.includes(name)) {
-    missing.push(name);
+  if (!missing.includes(name.toLowerCase())) {
+    missing.push(name.toLowerCase());
     localStorage.setItem("missingAircraft", JSON.stringify(missing));
   }
 }
@@ -140,6 +140,24 @@ async function searchAircraft() {
   table.querySelectorAll("tr:not(:first-child)").forEach(r => r.remove());
   if (!query) return;
 
+  // ====== Zuerst prüfen, ob es im specs-Objekt schon existiert ======
+  if (specs[key]) {
+    // Direkt Tabelle füllen
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${query}</td>
+      <td>${specs[key][0]}</td>
+      <td>${specs[key][1]}</td>
+      <td>${specs[key][2]}</td>
+      <td>${specs[key][3]}</td>
+      <td>${specs[key][4]}</td>
+      <td>—</td>
+    `;
+    table.appendChild(row);
+    return; // Suche abgeschlossen
+  }
+
+  // ====== Wenn nicht gefunden, Wikipedia abfragen ======
   try {
     const response = await fetch(
       `https://de.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`
