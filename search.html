@@ -2,163 +2,116 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fluggeräte Suche</title>
 <style>
-  html, body {
-    margin: 0;
-    padding: 0;
-    font-family: Arial, sans-serif;
-    height: 100%;
-    background: src="https://i.ibb.co/fGBdMjkD/IMG-1931.jpg" alt= "patrouille-suisse"no-repeat center center fixed;
-    background-size: cover;
-    color: #fff;
-  }
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: url('https://raw.githubusercontent.com/DEINNAME/DEINREPO/main/patrouille-suisse.jpg')
+              no-repeat center center fixed;
+  background-size: cover;
+  color: white;
+}
 
-  h1 {
-    text-align: center;
-    margin-top: 20px;
-    text-shadow: 2px 2px 6px black;
-  }
+h1 {
+  text-align: center;
+  margin: 20px;
+  text-shadow: 2px 2px 6px black;
+}
 
-  #sucheContainer {
-    text-align: center;
-    margin: 20px 0;
-  }
+.search-box {
+  text-align: center;
+  margin-bottom: 20px;
+}
 
-  #searchInput {
-    padding: 10px;
-    font-size: 1em;
-    width: 60%;
-    max-width: 400px;
-    border-radius: 5px;
-    border: none;
-    outline: none;
-  }
+input {
+  padding: 10px;
+  width: 300px;
+  font-size: 1em;
+}
 
-  #tabelle {
-    width: 90%;
-    max-width: 1200px;
-    margin: 0 auto;
-    border-collapse: collapse;
-    background: rgba(0,0,0,0.7);
-  }
+table {
+  width: 90%;
+  margin: auto;
+  border-collapse: collapse;
+  background: rgba(0,0,0,0.7);
+}
 
-  #tabelle th, #tabelle td {
-    border: 1px solid #fff;
-    padding: 10px;
-    text-align: center;
-    color: #fff;
-  }
+th, td {
+  border: 1px solid white;
+  padding: 10px;
+  text-align: center;
+}
 
-  #tabelle th {
-    background-color: rgba(0, 128, 255, 0.8);
-  }
+th {
+  background: rgba(0,120,255,0.8);
+}
 
-  #tabelle tr:nth-child(even) {
-    background-color: rgba(255,255,255,0.1);
-  }
-
-  #tabelle tr:nth-child(odd) {
-    background-color: rgba(0,0,0,0.3);
-  }
-
-  img {
-    max-width: 150px;
-    border-radius: 5px;
-  }
-
-  #noResult {
-    text-align: center;
-    color: red;
-    font-weight: bold;
-    margin-top: 20px;
-    text-shadow: 1px 1px 2px black;
-  }
+img {
+  max-width: 150px;
+}
 </style>
 </head>
 <body>
 
-<h1>Fluggeräte Suche</h1>
+<h1>Fluggeräte Datenbank</h1>
 
-<div id="sucheContainer">
-  <input type="text" id="searchInput" placeholder="Fluggerät eingeben (z.B. A380, F22, Air Force One)" 
-         onkeypress="if(event.key==='Enter'){searchAircraft(this.value);}">
+<div class="search-box">
+  <input id="search" placeholder="z.B. F22, P-51, A380"
+         onkeypress="if(event.key==='Enter')searchAircraft()">
 </div>
 
-<table id="tabelle">
-  <tr>
-    <th>Name</th>
-    <th>Typ</th>
-    <th>Hersteller</th>
-    <th>Max. Gewicht</th>
-    <th>Sitzplätze</th>
-    <th>Max. Geschwindigkeit</th>
-    <th>Bild</th>
-  </tr>
+<table id="table">
+<tr>
+  <th>Name</th>
+  <th>Typ</th>
+  <th>Hersteller</th>
+  <th>Max. Gewicht</th>
+  <th>Sitzplätze</th>
+  <th>Max. Geschwindigkeit</th>
+  <th>Bild</th>
+</tr>
 </table>
 
-<div id="noResult" style="display:none;">Kein Fluggerät gefunden!</div>
-
 <script>
-const tabelle = document.getElementById("tabelle");
-const noResult = document.getElementById("noResult");
+const specs = {
+  "a380": ["Flugzeug","Airbus","575.000 kg","555","1020 km/h"],
+  "f22": ["Kampfflugzeug","Lockheed Martin","29.000 kg","1","2410 km/h"],
+  "p-51": ["Kampfflugzeug","North American","4.000 kg","1","700 km/h"],
+  "segelflieger": ["Segelflugzeug","Schleicher","525 kg","1","285 km/h"],
+  "falcon 9": ["Rakete","SpaceX","549.000 kg","0","27.000 km/h"],
+  "air force one": ["Flugzeug","Boeing","190.000 kg","102","850 km/h"]
+};
 
-async function searchAircraft(query) {
-  tabelle.querySelectorAll("tr:not(:first-child)").forEach(row => row.remove());
-  noResult.style.display = "none";
+async function searchAircraft() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const table = document.getElementById("table");
 
-  if(!query) return;
-
-  // SPARQL-Abfrage: alle relevanten Properties
-  const sparql = `
-  SELECT ?item ?itemLabel ?typeLabel ?manufacturerLabel ?weight ?capacity ?speed ?image WHERE {
-    ?item rdfs:label ?itemLabel.
-    FILTER(CONTAINS(LCASE(?itemLabel), "${query.toLowerCase()}")).
-    OPTIONAL { ?item wdt:P31 ?type. }
-    OPTIONAL { ?item wdt:P176 ?manufacturer. }
-    OPTIONAL { ?item wdt:P2067 ?weight. }   # Max Gewicht
-    OPTIONAL { ?item wdt:P1093 ?capacity. } # Sitzplätze
-    OPTIONAL { ?item wdt:P1119 ?speed. }    # Max Geschwindigkeit
-    OPTIONAL { ?item wdt:P18 ?image. }      # Bild
-    SERVICE wikibase:label { bd:serviceParam wikibase:language "de,en". }
-  } LIMIT 1`;
-
-  const url = "https://query.wikidata.org/sparql?query=" + encodeURIComponent(sparql) + "&format=json";
+  table.querySelectorAll("tr:not(:first-child)").forEach(r => r.remove());
 
   try {
-    const response = await fetch(url);
+    const response = await fetch(
+      `https://de.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)}`
+    );
     const data = await response.json();
-    if(data.results.bindings.length === 0){
-      noResult.style.display = "block";
-      return;
-    }
 
-    const res = data.results.bindings[0];
+    if (!data.title) return;
 
-    const name = res.itemLabel?.value || "Nicht verfügbar";
-    const typ = res.typeLabel?.value || "Nicht verfügbar";
-    const hersteller = res.manufacturerLabel?.value || "Nicht verfügbar";
-    const maxGewicht = res.weight?.value || "Nicht verfügbar";
-    const sitzplaetze = res.capacity?.value || "Nicht verfügbar";
-    const geschwindigkeit = res.speed?.value || "Nicht verfügbar";
-    const bild = res.image?.value || "";
+    const s = specs[q] || ["Nicht verfügbar","Nicht verfügbar","–","–","–"];
 
     const row = document.createElement("tr");
     row.innerHTML = `
-      <td>${name}</td>
-      <td>${typ}</td>
-      <td>${hersteller}</td>
-      <td>${maxGewicht}</td>
-      <td>${sitzplaetze}</td>
-      <td>${geschwindigkeit}</td>
-      <td>${bild ? `<img src="https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(bild)}" alt="${name}">` : "Kein Bild"}</td>
+      <td>${data.title}</td>
+      <td>${s[0]}</td>
+      <td>${s[1]}</td>
+      <td>${s[2]}</td>
+      <td>${s[3]}</td>
+      <td>${s[4]}</td>
+      <td>${data.originalimage ? `<img src="${data.originalimage.source}">` : "—"}</td>
     `;
-    tabelle.appendChild(row);
-
-  } catch(err){
-    console.error(err);
-    noResult.style.display = "block";
+    table.appendChild(row);
+  } catch (e) {
+    console.error(e);
   }
 }
 </script>
