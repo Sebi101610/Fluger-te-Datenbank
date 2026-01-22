@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <title>Fluggeräte Suche</title>
+
 <style>
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: url('patrouillesuisse.jpg')
-              no-repeat center center fixed;
+  background-image: url("https://raw.githubusercontent.com/DEINNAME/DEINREPO/main/patrouille-suisse.jpg");
   background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   color: white;
 }
 
@@ -21,20 +23,27 @@ h1 {
 
 .search-box {
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 input {
   padding: 10px;
-  width: 300px;
+  width: 320px;
   font-size: 1em;
+}
+
+button {
+  padding: 10px 15px;
+  margin: 5px;
+  font-size: 0.9em;
+  cursor: pointer;
 }
 
 table {
   width: 90%;
-  margin: auto;
+  margin: 20px auto;
   border-collapse: collapse;
-  background: rgba(0,0,0,0.7);
+  background: rgba(0,0,0,0.75);
 }
 
 th, td {
@@ -44,14 +53,16 @@ th, td {
 }
 
 th {
-  background: rgba(0,120,255,0.8);
+  background: rgba(0,120,255,0.9);
 }
 
 img {
   max-width: 150px;
+  border-radius: 5px;
 }
 </style>
 </head>
+
 <body>
 
 <h1>Fluggeräte Datenbank</h1>
@@ -59,6 +70,9 @@ img {
 <div class="search-box">
   <input id="search" placeholder="z.B. F22, P-51, A380"
          onkeypress="if(event.key==='Enter')searchAircraft()">
+  <br>
+  <button onclick="searchAircraft()">Suchen</button>
+  <button onclick="showMissing()">Fehlende anzeigen</button>
 </div>
 
 <table id="table">
@@ -74,6 +88,7 @@ img {
 </table>
 
 <script>
+// ====== LOKALE SPEZIFIKATIONEN ======
 const specs = {
   "a380": ["Flugzeug","Airbus","575.000 kg","555","1020 km/h"],
   "f22": ["Kampfflugzeug","Lockheed Martin","29.000 kg","1","2410 km/h"],
@@ -83,21 +98,42 @@ const specs = {
   "air force one": ["Flugzeug","Boeing","190.000 kg","102","850 km/h"]
 };
 
+// ====== FEHLENDE SPEICHERN ======
+function saveMissing(name) {
+  let missing = JSON.parse(localStorage.getItem("missingAircraft")) || [];
+  if (!missing.includes(name)) {
+    missing.push(name);
+    localStorage.setItem("missingAircraft", JSON.stringify(missing));
+  }
+}
+
+// ====== SUCHE ======
 async function searchAircraft() {
-  const q = document.getElementById("search").value.trim().toLowerCase();
+  const input = document.getElementById("search");
+  const query = input.value.trim();
+  const key = query.toLowerCase();
   const table = document.getElementById("table");
 
   table.querySelectorAll("tr:not(:first-child)").forEach(r => r.remove());
+  if (!query) return;
 
   try {
     const response = await fetch(
-      `https://de.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(q)}`
+      `https://de.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`
     );
     const data = await response.json();
 
-    if (!data.title) return;
+    if (!data.title) {
+      saveMissing(query);
+      alert("Kein Wikipedia-Eintrag → gespeichert");
+      return;
+    }
 
-    const s = specs[q] || ["Nicht verfügbar","Nicht verfügbar","–","–","–"];
+    const s = specs[key] || ["Nicht verfügbar","Nicht verfügbar","–","–","–"];
+
+    if (s.includes("Nicht verfügbar") || s.includes("–")) {
+      saveMissing(data.title.toLowerCase());
+    }
 
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -110,9 +146,21 @@ async function searchAircraft() {
       <td>${data.originalimage ? `<img src="${data.originalimage.source}">` : "—"}</td>
     `;
     table.appendChild(row);
-  } catch (e) {
-    console.error(e);
+
+  } catch (err) {
+    console.error(err);
+    saveMissing(query);
   }
+}
+
+// ====== FEHLENDE ANZEIGEN ======
+function showMissing() {
+  const missing = JSON.parse(localStorage.getItem("missingAircraft")) || [];
+  if (missing.length === 0) {
+    alert("Keine fehlenden Fluggeräte 👍");
+    return;
+  }
+  alert("Diese Fluggeräte fehlen noch:\n\n" + missing.join("\n"));
 }
 </script>
 
