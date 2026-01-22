@@ -64,19 +64,12 @@ const firebaseConfig = {
   messagingSenderId: "274621550753",
   appId: "1:274621550753:web:e85a666461c1867808e0e0"
 };
-
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
 const ADMIN_EMAIL = "sebas.brock@mstud.ch";
-let isAdmin = false;
-
-// 🔐 Firebase Auth (Admin)
-auth.onAuthStateChanged(user => {
-  isAdmin = !!(user && user.email === ADMIN_EMAIL);
-  document.getElementById('adminBox').style.display='none';
-});
+let isAdmin = true; // Für Demo. Später mit Firebase Auth ersetzen
 
 // 🔍 Suche
 async function searchAircraft() {
@@ -85,48 +78,56 @@ async function searchAircraft() {
   const table = document.getElementById("resultTable");
   table.innerHTML='<tr><th>Name</th><th>Typ</th><th>Hersteller</th><th>Gewicht</th><th>Sitzplätze</th><th>Geschwindigkeit</th></tr>';
 
-  // 1️⃣ Prüfen in Firebase
-  const doc = await db.collection("aircrafts").doc(key).get();
-  if(doc.exists){
-    const d = doc.data();
-    table.innerHTML += `<tr>
-      <td>${d.name}</td>
-      <td>${d.typ}</td>
-      <td>${d.hersteller}</td>
-      <td>${d.gewicht}</td>
-      <td>${d.sitze}</td>
-      <td>${d.speed}</td>
-    </tr>`;
-    loadAircraftImage(d.name);
-    return;
-  }
+  console.log("🔎 Suche nach:", searchVal);
 
-  // 2️⃣ Wenn nicht in Firebase → Wikipedia
+  // 1️⃣ Prüfen in Firebase
   try {
-    const api = "https://de.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts|pageimages&titles="
+    const doc = await db.collection("aircrafts").doc(key).get();
+    if(doc.exists){
+      const d = doc.data();
+      console.log("✅ Gefunden in Firebase:", d);
+      table.innerHTML += `<tr>
+        <td>${d.name}</td>
+        <td>${d.typ}</td>
+        <td>${d.hersteller}</td>
+        <td>${d.gewicht}</td>
+        <td>${d.sitze}</td>
+        <td>${d.speed}</td>
+      </tr>`;
+      loadAircraftImage(d.name);
+      return;
+    }
+  } catch(e){ console.log("❌ Firebase Fehler:", e); }
+
+  // 2️⃣ Wikipedia Englisch API
+  try {
+    const api = "https://en.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts|pageimages&titles="
                 + encodeURIComponent(searchVal)
                 + "&exintro=1&explaintext=1&pithumbsize=320";
     const res = await fetch(api);
     const data = await res.json();
     const pages = Object.values(data.query.pages);
     if(!pages || pages[0].missing){
+      console.log("⚠️ Wikipedia liefert nichts, Admin eintragen lassen");
       table.innerHTML += `<tr><td colspan="6">Keine Daten gefunden</td></tr>`;
       toggleAdmin(true);
       document.getElementById('a_name').value = searchVal;
       document.getElementById('aircraftImage').style.display='none';
       return;
     }
+
     const page = pages[0];
     document.getElementById('aircraftImage').src = page.thumbnail?.source || 'images/no-image.jpg';
     document.getElementById('aircraftImage').style.display='block';
+    console.log("✅ Gefunden bei Wikipedia:", page.title);
 
-    // Einfaches Parsing (kann verbessert werden)
+    // Einfaches Parsing aus extract (kann noch Regex verbessern)
     const extract = page.extract || "";
-    const typ = extract.match(/Typ\s*:\s*(.*)/i)?.[1] || "-";
-    const hersteller = extract.match(/Hersteller\s*:\s*(.*)/i)?.[1] || "-";
-    const gewicht = extract.match(/Gewicht\s*:\s*(.*)/i)?.[1] || "-";
-    const sitze = extract.match(/Sitzplätze\s*:\s*(.*)/i)?.[1] || "-";
-    const speed = extract.match(/Höchstgeschwindigkeit\s*:\s*(.*)/i)?.[1] || "-";
+    const typ = extract.match(/type\s*[:\-]\s*(.*)/i)?.[1] || "-";
+    const hersteller = extract.match(/manufacturer\s*[:\-]\s*(.*)/i)?.[1] || "-";
+    const gewicht = extract.match(/weight\s*[:\-]\s*(.*)/i)?.[1] || "-";
+    const sitze = extract.match(/seat[s]?\s*[:\-]\s*(.*)/i)?.[1] || "-";
+    const speed = extract.match(/speed\s*[:\-]\s*(.*)/i)?.[1] || "-";
 
     table.innerHTML += `<tr>
       <td>${page.title}</td>
@@ -138,12 +139,12 @@ async function searchAircraft() {
     </tr>`;
 
   } catch(e){
-    console.log(e);
+    console.log("❌ Wikipedia Fehler:", e);
     table.innerHTML += `<tr><td colspan="6">Fehler bei der Abfrage</td></tr>`;
   }
 }
 
-// 🖼 Bild laden (optional: zusätzliche API falls nötig)
+// 🖼 Bild von Wikimedia Commons (Backup)
 async function loadAircraftImage(name){
   const img = document.getElementById("aircraftImage");
   const api="https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch="+encodeURIComponent(name+" aircraft")+"&gsrlimit=1&prop=imageinfo&iiprop=url";
@@ -158,7 +159,7 @@ async function loadAircraftImage(name){
   img.style.display="block";
 }
 
-// ✍️ Admin speichert fehlende Flugzeuge
+// ✍️ Admin speichert fehlende Flugzeuge in Firebase
 function saveAircraft(){
   if(!isAdmin){ alert("Nur Admin darf speichern!"); return; }
   const data={
