@@ -2,88 +2,73 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aviatik Login</title>
+<title>Aviatik – Login</title>
 <style>
-body {
-  font-family: Arial, sans-serif;
-  margin: 0;
-  min-height: 100vh;
-  background: linear-gradient(135deg,#0077b6,#023e8a,#00b4d8);
-  color: white;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-h1 { margin-bottom: 40px; text-align:center; font-size:2em; }
-.login-box {
-  display:flex; flex-direction:column; align-items:center;
-  background: rgba(0,0,0,0.25); padding:30px; border-radius:10px;
-}
-input {
-  padding:10px; margin:10px 0; border-radius:5px; border:none; width:250px; font-size:16px;
-}
-button.action {
-  background:#00b4d8; border:none; padding:10px 20px; border-radius:5px;
-  color:white; font-weight:bold; cursor:pointer; margin-top:10px;
-}
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to bottom, #0b1c2d, #1e3c72);
+    color: white;
+    height: 100vh;
+  }
+
+  .top-right {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+  }
+
+  button {
+    padding: 10px 20px;
+    font-size: 1em;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+
+  .login-box {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+  }
+
+  .box {
+    background: rgba(0,0,0,0.6);
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+  }
+
+  input {
+    display: block;
+    margin: 10px auto;
+    padding: 10px;
+    width: 250px;
+  }
 </style>
 </head>
 <body>
 
-<h1>Willkommen in der Aviatik-Datenbank</h1>
-
-<div class="login-box">
-  <input type="email" id="email" placeholder="E-Mail">
-  <input type="password" id="password" placeholder="Passwort">
-  <button class="action" id="loginBtn">Login</button>
-  <button class="action" id="registerBtn">Registrieren</button>
+<div class="top-right">
+  <button onclick="login()">Login</button>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+<div class="login-box">
+  <div class="box">
+    <h1>Aviatik Datenbank</h1>
+    <p>Bitte einloggen oder registrieren</p>
+    <input type="email" placeholder="E-Mail">
+    <input type="password" placeholder="Passwort">
+    <button onclick="login()">Weiter</button>
+  </div>
+</div>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBG_GCHduhL5CltwZen_rWGtOtdIQN-ee0",
-  authDomain: "fluggeraete-972ab.firebaseapp.com",
-  projectId: "fluggeraete-972ab",
-  storageBucket: "fluggeraete-972ab.appspot.com",
-  messagingSenderId: "274621550753",
-  appId: "1:274621550753:web:e85a666461c1867808e0e0"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-const loginBtn = document.getElementById('loginBtn');
-const registerBtn = document.getElementById('registerBtn');
-const emailInput = document.getElementById('email');
-const passwordInput = document.getElementById('password');
-
-registerBtn.addEventListener('click', () => {
-  const email = emailInput.value;
-  const password = passwordInput.value;
-  if(!email || !password) return alert("Bitte E-Mail und Passwort eingeben!");
-  createUserWithEmailAndPassword(auth,email,password)
-    .then(()=>window.location.href="animation.html")
-    .catch(e=>alert("Fehler: "+e.message));
-});
-
-loginBtn.addEventListener('click', () => {
-  const email = emailInput.value;
-  const password = passwordInput.value;
-  if(!email || !password) return alert("Bitte E-Mail und Passwort eingeben!");
-  signInWithEmailAndPassword(auth,email,password)
-    .then(()=>window.location.href="animation.html")
-    .catch(e=>alert("Fehler: "+e.message));
-});
-
-// Schon angemeldet → direkt Animation
-onAuthStateChanged(auth,user=>{
-  if(user) window.location.href="animation.html";
-});
+<script>
+function login() {
+  // Fake Login → Weiterleitung
+  window.location.href = "loading.html";
+}
 </script>
 
 </body>
