@@ -8,7 +8,7 @@
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background-image: url("patrouillesuisse.jpg");
+  background-image: url("https://raw.githubusercontent.com/DEINNAME/DEINREPO/main/patrouille-suisse.jpg");
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
@@ -60,6 +60,16 @@ img {
   max-width: 150px;
   border-radius: 5px;
 }
+
+#missingBox {
+  margin: 20px auto;
+  width: 90%;
+  max-width: 600px;
+  background: rgba(0,0,0,0.85);
+  padding: 15px;
+  border-radius: 8px;
+  display: none;
+}
 </style>
 </head>
 
@@ -73,6 +83,7 @@ img {
   <br>
   <button onclick="searchAircraft()">Suchen</button>
   <button onclick="showMissing()">Fehlende anzeigen</button>
+  <button onclick="clearMissing()">Liste löschen</button>
 </div>
 
 <table id="table">
@@ -86,6 +97,11 @@ img {
   <th>Bild</th>
 </tr>
 </table>
+
+<div id="missingBox">
+  <h3>Fehlende Fluggeräte (localStorage)</h3>
+  <ul id="missingList"></ul>
+</div>
 
 <script>
 // ====== LOKALE SPEZIFIKATIONEN ======
@@ -125,7 +141,7 @@ async function searchAircraft() {
 
     if (!data.title) {
       saveMissing(query);
-      alert("Kein Wikipedia-Eintrag → gespeichert");
+      alert("Nicht gefunden – gespeichert");
       return;
     }
 
@@ -155,12 +171,30 @@ async function searchAircraft() {
 
 // ====== FEHLENDE ANZEIGEN ======
 function showMissing() {
+  const box = document.getElementById("missingBox");
+  const list = document.getElementById("missingList");
+  list.innerHTML = "";
+
   const missing = JSON.parse(localStorage.getItem("missingAircraft")) || [];
+
   if (missing.length === 0) {
-    alert("Keine fehlenden Fluggeräte 👍");
-    return;
+    list.innerHTML = "<li>Keine fehlenden Fluggeräte 👍</li>";
+  } else {
+    missing.forEach(item => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      list.appendChild(li);
+    });
   }
-  alert("Diese Fluggeräte fehlen noch:\n\n" + missing.join("\n"));
+
+  box.style.display = "block";
+}
+
+// ====== LISTE LÖSCHEN ======
+function clearMissing() {
+  localStorage.removeItem("missingAircraft");
+  alert("Liste gelöscht");
+  document.getElementById("missingBox").style.display = "none";
 }
 </script>
 
