@@ -3,61 +3,36 @@
 <head>
 <meta charset="UTF-8">
 <title>Fluggeräte Suche</title>
-
 <style>
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background-image: url("patrouillesuisse.jpg");
+  background-image: url("https://raw.githubusercontent.com/DEINNAME/DEINREPO/main/patrouille-suisse.jpg");
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
   color: white;
 }
-
 h1 {
   text-align: center;
   margin: 20px;
   text-shadow: 2px 2px 6px black;
 }
-
 .search-box {
   text-align: center;
   margin-bottom: 10px;
 }
-
-input {
-  padding: 8px;
-  margin: 3px;
-}
-
-button {
-  padding: 8px 12px;
-  margin: 5px;
-  cursor: pointer;
-}
-
+input { padding: 8px; margin: 3px; }
+button { padding: 8px 12px; margin: 5px; cursor: pointer; }
 table {
   width: 90%;
   margin: 20px auto;
   border-collapse: collapse;
   background: rgba(0,0,0,0.75);
 }
-
-th, td {
-  border: 1px solid white;
-  padding: 10px;
-  text-align: center;
-}
-
-th {
-  background: rgba(0,120,255,0.9);
-}
-
-img {
-  max-width: 150px;
-  border-radius: 5px;
-}
+th, td { border: 1px solid white; padding: 10px; text-align: center; }
+th { background: rgba(0,120,255,0.9); }
+img { max-width: 150px; border-radius: 5px; }
 
 #missingBox {
   margin: 20px auto;
@@ -66,7 +41,7 @@ img {
   background: rgba(0,0,0,0.85);
   padding: 15px;
   border-radius: 8px;
-  display: none;
+  display: none; /* Start geschlossen */
 }
 #missingBox div {
   margin-bottom: 15px;
@@ -74,12 +49,23 @@ img {
   background: rgba(255,255,255,0.1);
   border-radius: 5px;
 }
-#missingBox input {
-  width: 100px;
+#missingBox input { width: 100px; }
+
+#recentSearches {
+  width: 90%;
+  margin: 10px auto;
+  text-align: center;
+}
+#recentSearches span {
+  background: rgba(0,0,0,0.6);
+  padding: 5px 10px;
+  margin: 3px;
+  border-radius: 5px;
+  display: inline-block;
+  cursor: pointer;
 }
 </style>
 </head>
-
 <body>
 
 <h1>Fluggeräte Datenbank</h1>
@@ -89,9 +75,11 @@ img {
          onkeypress="if(event.key==='Enter')searchAircraft()">
   <br>
   <button onclick="searchAircraft()">Suchen</button>
-  <button onclick="showMissing()">Fehlende anzeigen</button>
+  <button onclick="toggleMissing()">Fehlende bearbeiten</button>
   <button onclick="clearMissing()">Liste löschen</button>
 </div>
+
+<div id="recentSearches"></div>
 
 <table id="table">
 <tr>
@@ -130,6 +118,39 @@ function saveMissing(name) {
   }
 }
 
+// ====== RECENT SEARCHES ======
+function updateRecent(query) {
+  let recent = JSON.parse(localStorage.getItem("recentSearches")) || [];
+  query = query.trim();
+  if (!query) return;
+  // Entferne falls schon vorhanden
+  recent = recent.filter(q => q.toLowerCase() !== query.toLowerCase());
+  // Neue Suche oben hinzufügen
+  recent.unshift(query);
+  // Max 5 behalten
+  if (recent.length > 5) recent = recent.slice(0,5);
+  localStorage.setItem("recentSearches", JSON.stringify(recent));
+  renderRecent();
+}
+
+function renderRecent() {
+  const div = document.getElementById("recentSearches");
+  div.innerHTML = "";
+  const recent = JSON.parse(localStorage.getItem("recentSearches")) || [];
+  recent.forEach(q => {
+    const span = document.createElement("span");
+    span.textContent = q;
+    span.onclick = () => { document.getElementById("search").value = q; searchAircraft(); };
+    div.appendChild(span);
+  });
+}
+
+// ====== TOGGLE FEHLENDE MASKE ======
+function toggleMissing() {
+  const box = document.getElementById("missingBox");
+  box.style.display = (box.style.display === "none") ? "block" : "none";
+}
+
 // ====== SUCHE ======
 async function searchAircraft() {
   const input = document.getElementById("search");
@@ -140,7 +161,9 @@ async function searchAircraft() {
   table.querySelectorAll("tr:not(:first-child)").forEach(r => r.remove());
   if (!query) return;
 
-  // ====== Zuerst prüfen, ob es im specs-Objekt schon existiert ======
+  updateRecent(query); // Speichern der Suche
+
+  // Specs-Check zuerst
   if (specs[key]) {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -156,7 +179,7 @@ async function searchAircraft() {
     return;
   }
 
-  // ====== Wenn nicht gefunden, Wikipedia abfragen ======
+  // Wikipedia-Abfrage
   try {
     const response = await fetch(
       `https://de.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`
@@ -169,7 +192,6 @@ async function searchAircraft() {
     }
 
     const s = specs[key] || ["Nicht verfügbar","Nicht verfügbar","–","–","–"];
-
     if (s.includes("Nicht verfügbar") || s.includes("–")) {
       saveMissing(data.title.toLowerCase());
     }
@@ -254,10 +276,12 @@ function saveSpecs(name) {
 // ====== LISTE LÖSCHEN ======
 function clearMissing() {
   localStorage.removeItem("missingAircraft");
-  alert("Liste gelöscht");
   document.getElementById("missingBox").style.display = "none";
+  alert("Liste gelöscht");
 }
-</script>
 
+// Seite laden → letzte Suchen anzeigen
+renderRecent();
+</script>
 </body>
 </html>
