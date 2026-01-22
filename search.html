@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Fluggeräte Datenbank</title>
 
-<!-- Firebase -->
+<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -18,35 +18,14 @@ body {
   color:white;
   text-align:center;
 }
-
 main { padding-top:50px; }
-
 input, button { padding:6px 10px; margin:4px; font-size:16px; }
-
-table {
-  margin:20px auto;
-  width:90%;
-  max-width:800px;
-  border-collapse:collapse;
-  background:rgba(0,0,0,0.5);
-}
-
+table { margin:20px auto; width:90%; max-width:800px; border-collapse:collapse; background:rgba(0,0,0,0.5);}
 th,td { border:1px solid white; padding:8px; }
-
 #aircraftImage { max-width:320px; margin:20px auto; display:none; border-radius:8px; }
-
-#adminBox {
-  display:none;
-  margin:20px auto;
-  max-width:600px;
-  background:rgba(0,0,0,0.7);
-  padding:15px;
-  border-radius:8px;
-  text-align:left;
-}
+#adminBox { display:none; margin:20px auto; max-width:600px; background:rgba(0,0,0,0.7); padding:15px; border-radius:8px; text-align:left;}
 </style>
 </head>
-
 <body>
 <main>
 <h1>Fluggeräte Suche</h1>
@@ -93,27 +72,21 @@ const db = firebase.firestore();
 const ADMIN_EMAIL = "sebas.brock@mstud.ch";
 let isAdmin = false;
 
-// 🔐 LOGIN für Admin (nur per E-Mail/Passwort in Firebase)
-function loginAdmin(email, password){
-  auth.signInWithEmailAndPassword(email,password).catch(e=>alert(e.message));
-}
-
-function logoutAdmin(){
-  auth.signOut();
-}
-
-auth.onAuthStateChanged(user=>{
-  isAdmin = !!(user && user.email===ADMIN_EMAIL);
-  adminBox.style.display="none";
+// 🔐 Firebase Auth (Admin)
+auth.onAuthStateChanged(user => {
+  isAdmin = !!(user && user.email === ADMIN_EMAIL);
+  document.getElementById('adminBox').style.display='none';
 });
 
 // 🔍 Suche
-async function searchAircraft(){
-  const input = document.getElementById("searchInput").value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+async function searchAircraft() {
+  const searchVal = document.getElementById("searchInput").value.trim();
+  const key = searchVal.toLowerCase().replace(/[^a-z0-9]/g,'');
   const table = document.getElementById("resultTable");
   table.innerHTML='<tr><th>Name</th><th>Typ</th><th>Hersteller</th><th>Gewicht</th><th>Sitzplätze</th><th>Geschwindigkeit</th></tr>';
 
-  const doc = await db.collection("aircrafts").doc(input).get();
+  // 1️⃣ Prüfen in Firebase
+  const doc = await db.collection("aircrafts").doc(key).get();
   if(doc.exists){
     const d = doc.data();
     table.innerHTML += `<tr>
@@ -124,14 +97,53 @@ async function searchAircraft(){
       <td>${d.sitze}</td>
       <td>${d.speed}</td>
     </tr>`;
-  } else {
-    table.innerHTML += `<tr><td colspan="6">Keine Daten gefunden</td></tr>`;
+    loadAircraftImage(d.name);
+    return;
   }
 
-  loadAircraftImage(input);
+  // 2️⃣ Wenn nicht in Firebase → Wikipedia
+  try {
+    const api = "https://de.wikipedia.org/w/api.php?action=query&format=json&origin=*&prop=extracts|pageimages&titles="
+                + encodeURIComponent(searchVal)
+                + "&exintro=1&explaintext=1&pithumbsize=320";
+    const res = await fetch(api);
+    const data = await res.json();
+    const pages = Object.values(data.query.pages);
+    if(!pages || pages[0].missing){
+      table.innerHTML += `<tr><td colspan="6">Keine Daten gefunden</td></tr>`;
+      toggleAdmin(true);
+      document.getElementById('a_name').value = searchVal;
+      document.getElementById('aircraftImage').style.display='none';
+      return;
+    }
+    const page = pages[0];
+    document.getElementById('aircraftImage').src = page.thumbnail?.source || 'images/no-image.jpg';
+    document.getElementById('aircraftImage').style.display='block';
+
+    // Einfaches Parsing (kann verbessert werden)
+    const extract = page.extract || "";
+    const typ = extract.match(/Typ\s*:\s*(.*)/i)?.[1] || "-";
+    const hersteller = extract.match(/Hersteller\s*:\s*(.*)/i)?.[1] || "-";
+    const gewicht = extract.match(/Gewicht\s*:\s*(.*)/i)?.[1] || "-";
+    const sitze = extract.match(/Sitzplätze\s*:\s*(.*)/i)?.[1] || "-";
+    const speed = extract.match(/Höchstgeschwindigkeit\s*:\s*(.*)/i)?.[1] || "-";
+
+    table.innerHTML += `<tr>
+      <td>${page.title}</td>
+      <td>${typ}</td>
+      <td>${hersteller}</td>
+      <td>${gewicht}</td>
+      <td>${sitze}</td>
+      <td>${speed}</td>
+    </tr>`;
+
+  } catch(e){
+    console.log(e);
+    table.innerHTML += `<tr><td colspan="6">Fehler bei der Abfrage</td></tr>`;
+  }
 }
 
-// 🖼 Bild von Wikimedia Commons
+// 🖼 Bild laden (optional: zusätzliche API falls nötig)
 async function loadAircraftImage(name){
   const img = document.getElementById("aircraftImage");
   const api="https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch="+encodeURIComponent(name+" aircraft")+"&gsrlimit=1&prop=imageinfo&iiprop=url";
@@ -142,16 +154,13 @@ async function loadAircraftImage(name){
     if(!pages) throw "kein Bild";
     const page=Object.values(pages)[0];
     img.src=page.imageinfo[0].url;
-  } catch {
-    img.src="images/no-image.jpg";
-  }
+  } catch { img.src="images/no-image.jpg"; }
   img.style.display="block";
 }
 
-// ✍️ Speichern (nur Admin, keine leeren Felder)
+// ✍️ Admin speichert fehlende Flugzeuge
 function saveAircraft(){
-  if(!isAdmin) { alert("Nur Admin darf speichern!"); return; }
-
+  if(!isAdmin){ alert("Nur Admin darf speichern!"); return; }
   const data={
     name: a_name.value.trim(),
     typ: a_typ.value.trim(),
@@ -162,14 +171,15 @@ function saveAircraft(){
   };
   if(Object.values(data).some(v=>v==="")){ alert("Bitte alle Felder ausfüllen!"); return; }
 
-  db.collection("aircrafts").doc(data.name.toLowerCase().replace(/[^a-z0-9]/g,'')).set(data)
-    .then(()=>alert("Gespeichert ✔"));
+  const key = data.name.toLowerCase().replace(/[^a-z0-9]/g,'');
+  db.collection("aircrafts").doc(key).set(data).then(()=>alert("Gespeichert ✔"));
 }
 
-// 🔽 Admin-Feld öffnen/schließen
+// Admin-Feld öffnen/schließen
 function toggleAdmin(forceOpen=false){
   if(!isAdmin) return;
-  adminBox.style.display=forceOpen || adminBox.style.display==="none" ? "block":"none";
+  const box = document.getElementById('adminBox');
+  box.style.display = forceOpen || box.style.display==="none" ? "block":"none";
 }
 </script>
 </body>
