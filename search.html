@@ -4,146 +4,173 @@
 <meta charset="UTF-8">
 <title>Fluggeräte Datenbank</title>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
 <style>
 body {
-  margin: 0;
+  margin:0;
   font-family: Arial, sans-serif;
   background: url('patrouillesuisse.jpg') no-repeat center center fixed;
   background-size: cover;
-  color: white;
-  text-align: center;
+  color:white;
+  text-align:center;
 }
 
-main {
-  padding-top: 50px;
-}
+main { padding-top:50px; }
 
-input, button {
-  padding: 6px 10px;
-  margin: 4px;
-  font-size: 16px;
-}
+input, button { padding:6px 10px; margin:4px; font-size:16px; }
 
 table {
-  margin: 20px auto;
-  width: 90%;
-  max-width: 800px;
-  border-collapse: collapse;
-  background: rgba(0,0,0,0.5);
+  margin:20px auto;
+  width:90%;
+  max-width:800px;
+  border-collapse:collapse;
+  background:rgba(0,0,0,0.5);
 }
 
-th, td {
-  border: 1px solid white;
-  padding: 8px;
-}
+th,td { border:1px solid white; padding:8px; }
 
-#aircraftImage {
-  max-width: 320px;
-  margin: 20px auto;
-  display: none;
-  border-radius: 8px;
+#aircraftImage { max-width:320px; margin:20px auto; display:none; border-radius:8px; }
+
+#adminBox {
+  display:none;
+  margin:20px auto;
+  max-width:600px;
+  background:rgba(0,0,0,0.7);
+  padding:15px;
+  border-radius:8px;
+  text-align:left;
 }
 </style>
 </head>
 
 <body>
 <main>
-  <h1>Fluggeräte Suche</h1>
+<h1>Fluggeräte Suche</h1>
 
-  <input id="searchInput" placeholder="z.B. F-22, A380, P-51"
-         onkeypress="if(event.key==='Enter') searchAircraft()">
-  <button onclick="searchAircraft()">Suchen</button>
+<input id="searchInput" placeholder="z.B. F-22, A380, P-51" onkeypress="if(event.key==='Enter') searchAircraft()">
+<button onclick="searchAircraft()">Suchen</button>
 
-  <img id="aircraftImage" alt="Flugzeug Bild">
+<img id="aircraftImage" alt="Flugzeug Bild">
 
-  <table id="resultTable">
-    <tr>
-      <th>Name</th>
-      <th>Typ</th>
-      <th>Hersteller</th>
-      <th>Gewicht</th>
-      <th>Sitzplätze</th>
-      <th>Geschwindigkeit</th>
-    </tr>
-  </table>
+<table id="resultTable">
+<tr><th>Name</th><th>Typ</th><th>Hersteller</th><th>Gewicht</th><th>Sitzplätze</th><th>Geschwindigkeit</th></tr>
+</table>
+
+<button onclick="toggleAdmin()">Bearbeiten</button>
+
+<div id="adminBox">
+<h3>Fluggerät eintragen / bearbeiten</h3>
+<input id="a_name" placeholder="Name"><br>
+<input id="a_typ" placeholder="Typ"><br>
+<input id="a_hersteller" placeholder="Hersteller"><br>
+<input id="a_gewicht" placeholder="Gewicht"><br>
+<input id="a_sitze" placeholder="Sitzplätze"><br>
+<input id="a_speed" placeholder="Geschwindigkeit"><br>
+<button onclick="saveAircraft()">Speichern</button>
+<button onclick="toggleAdmin()">Schliessen</button>
+</div>
 </main>
 
 <script>
-/* 🔍 Suchfunktion */
-async function searchAircraft() {
-  const searchInput = document.getElementById("searchInput");
-  const name = searchInput.value.trim();
-  if (!name) return;
+// 🔥 Firebase Config
+const firebaseConfig = {
+  apiKey: "AIzaSyBG_GCHduhL5CltwZen_rWGtOtdIQN-ee0",
+  authDomain: "fluggeraete-972ab.firebaseapp.com",
+  projectId: "fluggeraete-972ab",
+  storageBucket: "fluggeraete-972ab.appspot.com",
+  messagingSenderId: "274621550753",
+  appId: "1:274621550753:web:e85a666461c1867808e0e0"
+};
 
-  // Bild laden
-  loadAircraftImage(name);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-  // Daten aus "localStorage" (Beispiel) holen
-  const savedData = JSON.parse(localStorage.getItem("aircrafts") || "{}");
-  const key = name.toLowerCase();
+const ADMIN_EMAIL = "sebas.brock@mstud.ch";
+let isAdmin = false;
 
+// 🔐 LOGIN für Admin (nur per E-Mail/Passwort in Firebase)
+function loginAdmin(email, password){
+  auth.signInWithEmailAndPassword(email,password).catch(e=>alert(e.message));
+}
+
+function logoutAdmin(){
+  auth.signOut();
+}
+
+auth.onAuthStateChanged(user=>{
+  isAdmin = !!(user && user.email===ADMIN_EMAIL);
+  adminBox.style.display="none";
+});
+
+// 🔍 Suche
+async function searchAircraft(){
+  const input = document.getElementById("searchInput").value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
   const table = document.getElementById("resultTable");
-  table.innerHTML = `
-    <tr>
-      <th>Name</th><th>Typ</th><th>Hersteller</th>
-      <th>Gewicht</th><th>Sitzplätze</th><th>Geschwindigkeit</th>
+  table.innerHTML='<tr><th>Name</th><th>Typ</th><th>Hersteller</th><th>Gewicht</th><th>Sitzplätze</th><th>Geschwindigkeit</th></tr>';
+
+  const doc = await db.collection("aircrafts").doc(input).get();
+  if(doc.exists){
+    const d = doc.data();
+    table.innerHTML += `<tr>
+      <td>${d.name}</td>
+      <td>${d.typ}</td>
+      <td>${d.hersteller}</td>
+      <td>${d.gewicht}</td>
+      <td>${d.sitze}</td>
+      <td>${d.speed}</td>
     </tr>`;
-
-  if (savedData[key]) {
-    const d = savedData[key];
-    table.innerHTML += `
-      <tr>
-        <td>${d.name}</td>
-        <td>${d.typ}</td>
-        <td>${d.hersteller}</td>
-        <td>${d.gewicht}</td>
-        <td>${d.sitze}</td>
-        <td>${d.speed}</td>
-      </tr>`;
   } else {
-    table.innerHTML += `
-      <tr>
-        <td colspan="6">Keine Daten gefunden</td>
-      </tr>`;
+    table.innerHTML += `<tr><td colspan="6">Keine Daten gefunden</td></tr>`;
   }
+
+  loadAircraftImage(input);
 }
 
-/* 🖼 Automatisches Bild von Wikimedia Commons */
-async function loadAircraftImage(name) {
+// 🖼 Bild von Wikimedia Commons
+async function loadAircraftImage(name){
   const img = document.getElementById("aircraftImage");
-
-  const api =
-    "https://commons.wikimedia.org/w/api.php" +
-    "?action=query&format=json&origin=*" +
-    "&generator=search" +
-    "&gsrsearch=" + encodeURIComponent(name + " aircraft") +
-    "&gsrlimit=1&prop=imageinfo&iiprop=url";
-
-  try {
-    const res = await fetch(api);
-    const data = await res.json();
-    const pages = data.query?.pages;
-    if (!pages) throw "kein Bild gefunden";
-
-    const page = Object.values(pages)[0];
-    img.src = page.imageinfo[0].url;
+  const api="https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch="+encodeURIComponent(name+" aircraft")+"&gsrlimit=1&prop=imageinfo&iiprop=url";
+  try{
+    const res=await fetch(api);
+    const data=await res.json();
+    const pages=data.query?.pages;
+    if(!pages) throw "kein Bild";
+    const page=Object.values(pages)[0];
+    img.src=page.imageinfo[0].url;
   } catch {
-    img.src = "images/no-image.jpg"; // optionales Fallback
+    img.src="images/no-image.jpg";
   }
-
-  img.style.display = "block";
+  img.style.display="block";
 }
 
-/* Beispiel-Daten zum Testen */
-if (!localStorage.getItem("aircrafts")) {
-  const testData = {
-    "a380": {name:"A380", typ:"Passagierflugzeug", hersteller:"Airbus", gewicht:"575000 kg", sitze:"525", speed:"1020 km/h"},
-    "f-22": {name:"F-22", typ:"Kampfflugzeug", hersteller:"Lockheed Martin", gewicht:"19700 kg", sitze:"1", speed:"2410 km/h"},
-    "p-51": {name:"P-51", typ:"Jagdflugzeug", hersteller:"North American", gewicht:"3800 kg", sitze:"1", speed:"703 km/h"}
+// ✍️ Speichern (nur Admin, keine leeren Felder)
+function saveAircraft(){
+  if(!isAdmin) { alert("Nur Admin darf speichern!"); return; }
+
+  const data={
+    name: a_name.value.trim(),
+    typ: a_typ.value.trim(),
+    hersteller: a_hersteller.value.trim(),
+    gewicht: a_gewicht.value.trim(),
+    sitze: a_sitze.value.trim(),
+    speed: a_speed.value.trim()
   };
-  localStorage.setItem("aircrafts", JSON.stringify(testData));
+  if(Object.values(data).some(v=>v==="")){ alert("Bitte alle Felder ausfüllen!"); return; }
+
+  db.collection("aircrafts").doc(data.name.toLowerCase().replace(/[^a-z0-9]/g,'')).set(data)
+    .then(()=>alert("Gespeichert ✔"));
+}
+
+// 🔽 Admin-Feld öffnen/schließen
+function toggleAdmin(forceOpen=false){
+  if(!isAdmin) return;
+  adminBox.style.display=forceOpen || adminBox.style.display==="none" ? "block":"none";
 }
 </script>
-
 </body>
 </html>
