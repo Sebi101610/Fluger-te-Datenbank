@@ -4,11 +4,6 @@
 <meta charset="UTF-8">
 <title>Fluggeräte Datenbank</title>
 
-<!-- Firebase (HTML-kompatibel) -->
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-
 <style>
 body {
   margin: 0;
@@ -16,34 +11,17 @@ body {
   background: url('patrouillesuisse.jpg') no-repeat center center fixed;
   background-size: cover;
   color: white;
-}
-
-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: rgba(0,0,0,0.7);
-  padding: 10px;
-  text-align: right;
-  z-index: 100;
+  text-align: center;
 }
 
 main {
-  padding-top: 90px;
-  text-align: center;
-  backdrop-filter: brightness(0.7);
+  padding-top: 50px;
 }
 
-input {
-  padding: 6px;
+input, button {
+  padding: 6px 10px;
   margin: 4px;
-}
-
-button {
-  padding: 6px 12px;
-  margin: 4px;
-  cursor: pointer;
+  font-size: 16px;
 }
 
 table {
@@ -51,7 +29,7 @@ table {
   width: 90%;
   max-width: 800px;
   border-collapse: collapse;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.5);
 }
 
 th, td {
@@ -65,33 +43,15 @@ th, td {
   display: none;
   border-radius: 8px;
 }
-
-#adminBox {
-  display: none;
-  margin: 20px auto;
-  max-width: 600px;
-  background: rgba(0,0,0,0.85);
-  padding: 15px;
-  border-radius: 8px;
-}
 </style>
 </head>
 
 <body>
-
-<header>
-  <input id="email" placeholder="E-Mail">
-  <input id="password" type="password" placeholder="Passwort">
-  <button onclick="login()">Login</button>
-  <button onclick="logout()">Logout</button>
-</header>
-
 <main>
   <h1>Fluggeräte Suche</h1>
 
-  <input id="searchInput"
-         placeholder="z.B. F-22, A380, P-51"
-         onkeypress="if(event.key==='Enter')searchAircraft()">
+  <input id="searchInput" placeholder="z.B. F-22, A380, P-51"
+         onkeypress="if(event.key==='Enter') searchAircraft()">
   <button onclick="searchAircraft()">Suchen</button>
 
   <img id="aircraftImage" alt="Flugzeug Bild">
@@ -106,83 +66,31 @@ th, td {
       <th>Geschwindigkeit</th>
     </tr>
   </table>
-
-  <button onclick="toggleAdmin()">Bearbeiten</button>
-
-  <div id="adminBox">
-    <h3>Fluggerät eintragen / bearbeiten</h3>
-
-    <input id="a_name" placeholder="Name"><br>
-    <input id="a_typ" placeholder="Typ"><br>
-    <input id="a_hersteller" placeholder="Hersteller"><br>
-    <input id="a_gewicht" placeholder="Gewicht"><br>
-    <input id="a_sitze" placeholder="Sitzplätze"><br>
-    <input id="a_speed" placeholder="Geschwindigkeit"><br>
-
-    <button onclick="saveAircraft()">Speichern</button>
-    <button onclick="toggleAdmin()">Schliessen</button>
-  </div>
 </main>
 
 <script>
-/* Firebase Config */
-const firebaseConfig = {
-  apiKey: "AIzaSyBG_GCHduhL5CltwZen_rWGtOtdIQN-ee0",
-  authDomain: "fluggeraete-972ab.firebaseapp.com",
-  projectId: "fluggeraete-972ab",
-  storageBucket: "fluggeraete-972ab.appspot.com",
-  messagingSenderId: "274621550753",
-  appId: "1:274621550753:web:e85a666461c1867808e0e0"
-};
-
-firebase.initializeApp(firebaseConfig);
-
-const auth = firebase.auth();
-const db = firebase.firestore();
-
-const ADMIN_EMAIL = "sebas.brock@mstud.ch";
-let isAdmin = false;
-
-/* LOGIN */
-function login() {
-  auth.signInWithEmailAndPassword(email.value, password.value)
-    .catch(e => alert(e.message));
-}
-
-function logout() {
-  auth.signOut();
-}
-
-auth.onAuthStateChanged(user => {
-  isAdmin = !!(user && user.email === ADMIN_EMAIL);
-  adminBox.style.display = "none";
-});
-
-/* SUCHEN */
-function searchAircraft() {
-  const name = searchInput.value.trim().toLowerCase();
+/* 🔍 Suchfunktion */
+async function searchAircraft() {
+  const searchInput = document.getElementById("searchInput");
+  const name = searchInput.value.trim();
   if (!name) return;
 
+  // Bild laden
   loadAircraftImage(name);
 
-  db.collection("aircrafts").doc(name).get().then(doc => {
-    const table = resultTable;
-    table.innerHTML = `
-      <tr>
-        <th>Name</th><th>Typ</th><th>Hersteller</th>
-        <th>Gewicht</th><th>Sitzplätze</th><th>Geschwindigkeit</th>
-      </tr>`;
+  // Daten aus "localStorage" (Beispiel) holen
+  const savedData = JSON.parse(localStorage.getItem("aircrafts") || "{}");
+  const key = name.toLowerCase();
 
-    if (!doc.exists) {
-      alert("Kein Eintrag gefunden");
-      if (isAdmin) {
-        a_name.value = name;
-        toggleAdmin(true);
-      }
-      return;
-    }
+  const table = document.getElementById("resultTable");
+  table.innerHTML = `
+    <tr>
+      <th>Name</th><th>Typ</th><th>Hersteller</th>
+      <th>Gewicht</th><th>Sitzplätze</th><th>Geschwindigkeit</th>
+    </tr>`;
 
-    const d = doc.data();
+  if (savedData[key]) {
+    const d = savedData[key];
     table.innerHTML += `
       <tr>
         <td>${d.name}</td>
@@ -192,10 +100,15 @@ function searchAircraft() {
         <td>${d.sitze}</td>
         <td>${d.speed}</td>
       </tr>`;
-  });
+  } else {
+    table.innerHTML += `
+      <tr>
+        <td colspan="6">Keine Daten gefunden</td>
+      </tr>`;
+  }
 }
 
-/* AUTOMATISCHE BILDER */
+/* 🖼 Automatisches Bild von Wikimedia Commons */
 async function loadAircraftImage(name) {
   const img = document.getElementById("aircraftImage");
 
@@ -209,46 +122,26 @@ async function loadAircraftImage(name) {
   try {
     const res = await fetch(api);
     const data = await res.json();
-    const page = Object.values(data.query.pages)[0];
+    const pages = data.query?.pages;
+    if (!pages) throw "kein Bild gefunden";
+
+    const page = Object.values(pages)[0];
     img.src = page.imageinfo[0].url;
   } catch {
-    img.src = "images/no-image.jpg";
+    img.src = "images/no-image.jpg"; // optionales Fallback
   }
 
   img.style.display = "block";
 }
 
-/* SPEICHERN */
-function saveAircraft() {
-  if (!isAdmin) return;
-
-  const data = {
-    name: a_name.value.trim(),
-    typ: a_typ.value.trim(),
-    hersteller: a_hersteller.value.trim(),
-    gewicht: a_gewicht.value.trim(),
-    sitze: a_sitze.value.trim(),
-    speed: a_speed.value.trim()
+/* Beispiel-Daten zum Testen */
+if (!localStorage.getItem("aircrafts")) {
+  const testData = {
+    "a380": {name:"A380", typ:"Passagierflugzeug", hersteller:"Airbus", gewicht:"575000 kg", sitze:"525", speed:"1020 km/h"},
+    "f-22": {name:"F-22", typ:"Kampfflugzeug", hersteller:"Lockheed Martin", gewicht:"19700 kg", sitze:"1", speed:"2410 km/h"},
+    "p-51": {name:"P-51", typ:"Jagdflugzeug", hersteller:"North American", gewicht:"3800 kg", sitze:"1", speed:"703 km/h"}
   };
-
-  if (Object.values(data).some(v => v === "")) {
-    alert("Bitte alle Felder ausfüllen!");
-    return;
-  }
-
-  db.collection("aircrafts")
-    .doc(data.name.toLowerCase())
-    .set(data)
-    .then(() => alert("Gespeichert ✔"));
-}
-
-/* ADMIN-FELD TOGGLE */
-function toggleAdmin(forceOpen = false) {
-  if (!isAdmin) return;
-  adminBox.style.display =
-    forceOpen || adminBox.style.display === "none"
-      ? "block"
-      : "none";
+  localStorage.setItem("aircrafts", JSON.stringify(testData));
 }
 </script>
 
